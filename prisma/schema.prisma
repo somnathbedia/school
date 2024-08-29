@@ -14,8 +14,7 @@ datasource db {
 }
 
 model Student {
-  // id Int @id @default(autoincrement())
-  id String @default(uuid())
+  id String @id @default(uuid())
   student_name String @db.VarChar(100)
   father_name String @db.VarChar(100)
   mother_name String @db.VarChar(100)
@@ -25,7 +24,18 @@ model Student {
   email String @unique @db.VarChar(25)
   password String @db.VarChar(255)
   address String @db.VarChar(255)
+  request Request[]
 }
+
+model Request {
+  id   Int @id @default(autoincrement())
+  student Student @relation(fields: [studentId],references: [id])
+  studentId String 
+  request_type String
+  request_book String
+  createdAt DateTime
+}
+
 
 
 
