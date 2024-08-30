@@ -28,7 +28,7 @@ model Student {
 }
 
 model Request {
-  id   Int @id @default(autoincrement())
+  id   String @id @default(uuid())
   student Student @relation(fields: [studentId],references: [id])
   studentId String 
   request_type String

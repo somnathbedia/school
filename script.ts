@@ -1,11 +1,10 @@
 import { PrismaClient } from '@prisma/client'
 import express from "express";
 import { Request, Response } from 'express';
-import bcrypt from "bcryptjs";
-import { generateToken } from './tokenGenerator';
 import authenticateJwt from './authenticateJwt';
-import { bookrequestUpdate } from './query-methods';
 import cors from "cors";
+import registerStudent from './handlers/registration';
+import studentLogin from './handlers/login';
 
 const prisma = new PrismaClient()
 const app = express();
@@ -17,70 +16,15 @@ export interface CustomRequest extends Request {
     user?: any;
 }
 
-app.post("/student/register", async (req: Request, res: Response) => {
-    const { student_name, father_name, mother_name, dob, blood_group, contact_number, email, address } = req.body;
-    let { password } = req.body;
+app.post("/student/register", registerStudent)
 
 
-    const hashedPassword = await bcrypt.hash(password, 8);
-    password = hashedPassword;
-
-    const student = await prisma.student.create({
-        data: {
-            student_name,
-            father_name,
-            mother_name,
-            dob: new Date(dob),
-            blood_group,
-            contact_number,
-            email,
-            password,
-            address
-        }
-    })
-
-    student ? res.status(201).json({
-        message: "You are registered successfully!"
-    }) : res.status(500).json({
-        msg: "Server error"
-    })
-})
+app.post("/student/login", studentLogin)
 
 
-app.post("/student/login", async (req: Request, res: Response) => {
-    const { email, password } = req.body;
-
-    const User = await prisma.student.findUnique({
-        where: {
-            email,
-        }
-    });
-
-
-    if (User) {
-        const storedPassword = User?.password;
-
-        bcrypt.compare(password, storedPassword, (err, success) => {
-            if (err || !success) {
-                res.status(401).json({ msg: "Unautorized" });
-                return;
-            }
-
-            const token = generateToken({ _id: User.id, email: User.email });
-            res.json({ msg: "Student logged in successfully!", token });
-            return;
-
-        })
-    }
-    else {
-        return res.status(404).json({ msg: "User not found" });
-    }
-})
-
-
-app.post("/student/library/book/:id", authenticateJwt, async (req: CustomRequest, res: Response) => {
+app.post("/student/library/book", authenticateJwt, async (req: CustomRequest, res: Response) => {
     const { request_type, request_book } = req.body;
-    const studentId = req.params.id;
+    const studentId = req.user._id;
     let isUpdated = false;
     try {
         const request = await prisma.request.create({
@@ -89,14 +33,13 @@ app.post("/student/library/book/:id", authenticateJwt, async (req: CustomRequest
                 request_book,
                 studentId,
                 createdAt: new Date()
-            }
+            },
         })
-       
-        isUpdated = await bookrequestUpdate(request, req.user._id); 
+        request ? res.status(201).json({ msg: "Book request successfull!" }) : res.end();
     } catch (error) {
         res.sendStatus(500);
     }
-    isUpdated ? res.status(201).json({ msg: "Book request successfull!" }) : res.end();
+    
 })
 
 
